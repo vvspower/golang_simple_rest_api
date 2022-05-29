@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/MustafaAP/ProjectK-backend-Go/controllers/helper"
 	"github.com/MustafaAP/ProjectK-backend-Go/model"
 
@@ -97,6 +99,38 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		tokenStr := helper.GenerateJWT(id)
 		response.Success = true
 		response.Response = tokenStr
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func LoginUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "applicaton/json")
+	// var user model.User
+	var login model.Login
+	var user model.User
+	var response model.Response
+
+	response.Success = false
+
+	err := json.NewDecoder(r.Body).Decode(&login)
+	if err != nil {
+		log.Fatal(err)
+	}
+	filter := bson.M{"email": login.Email}
+	collection.FindOne(context.TODO(), filter).Decode(&user)
+
+	hashedPass := []byte(user.Password)
+	originalPass := []byte(login.Password)
+
+	err = bcrypt.CompareHashAndPassword(hashedPass, originalPass)
+	if err == nil {
+		tokenStr := helper.GenerateJWT(user.ID.Hex())
+		response.Response = tokenStr
+		response.Success = true
+		json.NewEncoder(w).Encode(response)
+
+	} else {
+		response.Response = "use correct credentials"
 		json.NewEncoder(w).Encode(response)
 	}
 }

@@ -12,6 +12,11 @@ type User struct {
 	Contact   string             `json:"contact,omitempty"`
 }
 
+type Login struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type Response struct {
 	Response string `json:"response,omitempty"`
 	Success  bool   `json:"success"`
