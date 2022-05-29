@@ -65,6 +65,12 @@ func emailExists(email string) bool {
 
 //! controllers
 
+func Home(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "applicaton/json")
+	json.NewEncoder(w).Encode("<h1>ProjectK</h1>")
+
+}
+
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "applicaton/json")
 	var response model.Response
