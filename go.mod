@@ -1,4 +1,4 @@
-module github.com/MustafaAP/ProjectK
+module github.com/MustafaAP/ProjectK-backend-Go
 
 go 1.18
 

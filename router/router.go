@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/MustafaAP/ProjectK/controllers"
+	"github.com/MustafaAP/ProjectK-backend-Go/controllers"
 	"github.com/gorilla/mux"
 )
 

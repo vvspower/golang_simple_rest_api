@@ -7,9 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/MustafaAP/ProjectK/controllers/helper"
-
-	"github.com/MustafaAP/ProjectK/model"
+	"github.com/MustafaAP/ProjectK-backend-Go/controllers/helper"
+	"github.com/MustafaAP/ProjectK-backend-Go/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
