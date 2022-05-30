@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/MustafaAP/ProjectK-backend-Go/router"
 )
@@ -15,7 +14,7 @@ func main() {
 	r := router.Router()
 
 	// fmt.Sprintf(":%s", os.Getenv("PORT")) use this when deploy
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), r))
+	log.Fatal(http.ListenAndServe(":9000", r))
 	fmt.Println("Listening at port 3000")
 
 }

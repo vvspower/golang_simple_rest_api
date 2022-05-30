@@ -20,3 +20,23 @@ func GenerateJWT(id string) string {
 	}
 	return tokenString
 }
+
+func ExtractClaims(at string) (jwt.MapClaims, bool) {
+	hmacSecretString := mySecretKey
+	hmacSecret := []byte(hmacSecretString)
+	token, err := jwt.Parse(at, func(token *jwt.Token) (interface{}, error) {
+		// check token signing method etc
+		return hmacSecret, nil
+	})
+
+	if err != nil {
+		return nil, false
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, true
+	} else {
+		log.Printf("Invalid JWT Token")
+		return nil, false
+	}
+}

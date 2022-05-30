@@ -40,6 +40,29 @@ func init() {
 
 // !helpers
 
+func checkEmpty(user model.User) bool {
+	var success bool = true
+	if user.Firstname == "" {
+		success = false
+	}
+	if user.Lastname == "" {
+		success = false
+	}
+	if user.Username == "" {
+		success = false
+	}
+	if user.Email == "" {
+		success = false
+	}
+	if user.Password == "" {
+		success = false
+	}
+	if user.Contact == "" {
+		success = false
+	}
+	return success
+}
+
 func userNameExists(username string) bool {
 	var check model.User
 	var exists bool = false
@@ -63,11 +86,18 @@ func emailExists(email string) bool {
 
 }
 
+func sendResponse(res string, success bool) model.Response {
+	var response model.Response
+	response.Response = res
+	response.Success = success
+	return response
+}
+
 //! controllers
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "applicaton/json")
-	var response model.Response
+
 	var user model.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -75,14 +105,14 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	email := emailExists(user.Email)
 	username := userNameExists(user.Username)
-
-	if email {
-		response.Response = "Email already exists"
-		response.Success = false
+	if !checkEmpty(user) {
+		response := sendResponse("Something went wrong. Please try again", false)
+		json.NewEncoder(w).Encode(response)
+	} else if email {
+		response := sendResponse("Email already exists", false)
 		json.NewEncoder(w).Encode(response)
 	} else if username {
-		response.Success = false
-		response.Response = "Username already exists"
+		response := sendResponse("Username already exists", false)
 		json.NewEncoder(w).Encode(response)
 
 	} else {
@@ -94,23 +124,20 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
 
-		id := result.InsertedID.(primitive.ObjectID).Hex()
+		fmt.Println(user)
 
+		id := result.InsertedID.(primitive.ObjectID).Hex()
 		tokenStr := helper.GenerateJWT(id)
-		response.Success = true
-		response.Response = tokenStr
+		response := sendResponse(tokenStr, true)
+
 		json.NewEncoder(w).Encode(response)
 	}
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "applicaton/json")
-	// var user model.User
 	var login model.Login
 	var user model.User
-	var response model.Response
-
-	response.Success = false
 
 	err := json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
@@ -125,14 +152,65 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	err = bcrypt.CompareHashAndPassword(hashedPass, originalPass)
 	if err == nil {
 		tokenStr := helper.GenerateJWT(user.ID.Hex())
-		response.Response = tokenStr
-		response.Success = true
+		response := sendResponse(tokenStr, true)
 		json.NewEncoder(w).Encode(response)
 
 	} else {
-		response.Response = "use correct credentials"
+		response := sendResponse("use correct credentials", false)
 		json.NewEncoder(w).Encode(response)
 	}
+}
+
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "applicaton/json")
+	var user model.User
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+
+	id := data["userid"]
+
+	objectId, _ := primitive.ObjectIDFromHex(fmt.Sprint(id))
+
+	filter := bson.M{"_id": objectId}
+
+	err := collection.FindOne(context.TODO(), filter).Decode(&user)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(user)
+	user.Password = "-"
+	json.NewEncoder(w).Encode(user)
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "applicaton/json")
+	var image model.Image
+
+	err := json.NewDecoder(r.Body).Decode(&image)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(image.Image)
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+
+	id, _ := primitive.ObjectIDFromHex(fmt.Sprint(data["userid"]))
+
+	fmt.Println("Hello")
+
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": bson.M{"image": image.Image}}
+	_, er := collection.UpdateOne(context.Background(), filter, update)
+	if er != nil {
+		log.Fatal(er)
+	}
+
+	response := sendResponse("Updated", true)
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // bismillah

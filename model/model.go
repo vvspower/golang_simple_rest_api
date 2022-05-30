@@ -9,7 +9,12 @@ type User struct {
 	Email     string             `json:"email,omitempty"`
 	Username  string             `json:"username,omitempty"`
 	Password  string             `json:"password,omitempty"`
+	Image     string             `json:"image,omitempty"`
 	Contact   string             `json:"contact,omitempty"`
+}
+
+type Image struct {
+	Image string `json:"image"`
 }
 
 type Login struct {
