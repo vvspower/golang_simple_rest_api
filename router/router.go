@@ -12,5 +12,12 @@ func Router() *mux.Router {
 	router.HandleFunc("/user", controllers.GetUser).Methods("GET")
 	router.HandleFunc("/user", controllers.UpdateUser).Methods("PUT")
 
+	// listing
+
+	router.HandleFunc("/listing", controllers.CreateListing).Methods("POST")
+	router.HandleFunc("/listing/{user}", controllers.GetUserListings).Methods("GET")
+	router.HandleFunc("/listing", controllers.GetAllListing).Methods("GET")
+	router.HandleFunc("/onelist/{id}", controllers.GetOneListing).Methods("GET")
+
 	return router
 }

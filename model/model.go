@@ -2,6 +2,8 @@ package model
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+// user
+
 type User struct {
 	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty" `
 	Firstname string             `json:"firstname,omitempty"`
@@ -13,8 +15,9 @@ type User struct {
 	Contact   string             `json:"contact,omitempty"`
 }
 
-type Image struct {
-	Image string `json:"image"`
+type UpdateUser struct {
+	Image   string `json:"image"`
+	Contact string `json:"contact"`
 }
 
 type Login struct {
@@ -25,4 +28,16 @@ type Login struct {
 type Response struct {
 	Response string `json:"response,omitempty"`
 	Success  bool   `json:"success"`
+}
+
+//  Listings
+
+type Listing struct {
+	ID          primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	UserID      string             `json:"userid"`
+	Image       string             `json:"image"`
+	Item        string             `json:"item"`
+	Description string             `json:"description"`
+	Price       string             `json:"price"`
+	Rating      string             `json:"rating"`
 }

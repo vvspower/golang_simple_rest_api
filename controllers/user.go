@@ -15,27 +15,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-const connectionString = "mongodb+srv://vvspower:lenovo123@cluster0.9ckcd.mongodb.net/?retryWrites=true&w=majority"
-const dbName = "ProjectK"
-const collectionName = "user"
 
 var collection *mongo.Collection
 
-var mySecretKey = []byte("$sussybaka")
-
-// initialization
-
 func init() {
-	clientOption := options.Client().ApplyURI(connectionString)
-	client, err := mongo.Connect(context.TODO(), clientOption)
-	if err != nil {
-		log.Fatal(err)
-	}
-	collection = client.Database(dbName).Collection(collectionName)
-	fmt.Println("MongoDB Connection Active")
+	collection = helper.InitializeDB("user")
 }
 
 // !helpers
@@ -86,7 +71,7 @@ func emailExists(email string) bool {
 
 }
 
-func sendResponse(res string, success bool) model.Response {
+func SendResponse(res string, success bool) model.Response {
 	var response model.Response
 	response.Response = res
 	response.Success = success
@@ -106,13 +91,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	email := emailExists(user.Email)
 	username := userNameExists(user.Username)
 	if !checkEmpty(user) {
-		response := sendResponse("Something went wrong. Please try again", false)
+		response := SendResponse("Something went wrong. Please try again", false)
 		json.NewEncoder(w).Encode(response)
 	} else if email {
-		response := sendResponse("Email already exists", false)
+		response := SendResponse("Email already exists", false)
 		json.NewEncoder(w).Encode(response)
 	} else if username {
-		response := sendResponse("Username already exists", false)
+		response := SendResponse("Username already exists", false)
 		json.NewEncoder(w).Encode(response)
 
 	} else {
@@ -124,11 +109,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
 
-		fmt.Println(user)
-
 		id := result.InsertedID.(primitive.ObjectID).Hex()
 		tokenStr := helper.GenerateJWT(id)
-		response := sendResponse(tokenStr, true)
+		response := SendResponse(tokenStr, true)
 
 		json.NewEncoder(w).Encode(response)
 	}
@@ -152,11 +135,11 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	err = bcrypt.CompareHashAndPassword(hashedPass, originalPass)
 	if err == nil {
 		tokenStr := helper.GenerateJWT(user.ID.Hex())
-		response := sendResponse(tokenStr, true)
+		response := SendResponse(tokenStr, true)
 		json.NewEncoder(w).Encode(response)
 
 	} else {
-		response := sendResponse("use correct credentials", false)
+		response := SendResponse("use correct credentials", false)
 		json.NewEncoder(w).Encode(response)
 	}
 }
@@ -178,37 +161,31 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(user)
 	user.Password = "-"
 	json.NewEncoder(w).Encode(user)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "applicaton/json")
-	var image model.Image
+	var update model.UpdateUser
 
-	err := json.NewDecoder(r.Body).Decode(&image)
+	err := json.NewDecoder(r.Body).Decode(&update)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(image.Image)
-
 	at := r.Header.Get("auth-token")
 	data, _ := helper.ExtractClaims(at)
 
 	id, _ := primitive.ObjectIDFromHex(fmt.Sprint(data["userid"]))
 
-	fmt.Println("Hello")
-
 	filter := bson.M{"_id": id}
-	update := bson.M{"$set": bson.M{"image": image.Image}}
-	_, er := collection.UpdateOne(context.Background(), filter, update)
+	updated := bson.M{"$set": bson.M{"image": update.Image, "contact": update.Contact}}
+	_, er := collection.UpdateOne(context.Background(), filter, updated)
 	if er != nil {
 		log.Fatal(er)
 	}
 
-	response := sendResponse("Updated", true)
+	response := SendResponse("Updated", true)
 
 	json.NewEncoder(w).Encode(response)
 }
