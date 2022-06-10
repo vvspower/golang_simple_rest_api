@@ -50,8 +50,6 @@ func CreateListing(w http.ResponseWriter, r *http.Request) {
 func GetUserListings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	//TODO : search for user in collection and get ID. use that id to search for listing.
-
 	var user model.User
 
 	params := mux.Vars(r)
@@ -132,12 +130,74 @@ func GetOneListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println(listing.Price)
-
 	json.NewEncoder(w).Encode(listing)
 }
 
+func UpdateListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var listing model.Listing
+	json.NewDecoder(r.Body).Decode(&listing)
+
+	params := mux.Vars(r)
+	id := params["id"]
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+
+	userid := data["userid"]
+
+	listingid, _ := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"userid": userid, "_id": listingid}
+	updated := bson.M{"$set": bson.M{"image": listing.Image, "description": listing.Description, "price": listing.Price}}
+
+	// TODO : update and adjust to new listing method
+	_, err := collection2.UpdateOne(context.Background(), filter, updated)
+	if err != nil {
+		response := SendResponse("Not Found", false)
+		w.WriteHeader(404)
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			return
+		}
+	} else {
+		response := SendResponse("List Updated", true)
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			return
+		}
+	}
+
+}
+
+func DeleteListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+
+	params := mux.Vars(r)
+	id := params["id"]
+
+	userid := data["userid"]
+	listingid, _ := primitive.ObjectIDFromHex(id)
+	fmt.Println(userid, listingid)
+
+	filter := bson.M{"userid": userid, "_id": listingid}
+
+	deleted, err := collection2.DeleteOne(context.TODO(), filter)
+
+	if err != nil {
+		// log.Fatal(err)
+		fmt.Println(deleted)
+		response := SendResponse("Error occured", false)
+		json.NewEncoder(w).Encode(response)
+	} else {
+		response := SendResponse("Deleted Sucessfully", true)
+		json.NewEncoder(w).Encode(response)
+	}
+
+}
+
 // TODO: Clean up the Find() code and put it in helper function
-
-//TODO :  Update Listing
-
-//TODO :  Delete Listing
+// TODO: Clean up error messages

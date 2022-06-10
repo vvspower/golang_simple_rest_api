@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/MustafaAP/ProjectK-backend-Go/controllers/helper"
 	"github.com/MustafaAP/ProjectK-backend-Go/model"
+	"github.com/gorilla/mux"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,9 +21,13 @@ import (
 )
 
 var collection *mongo.Collection
+var collectionFriendReq *mongo.Collection
+var collectionFriends *mongo.Collection
 
 func init() {
 	collection = helper.InitializeDB("user")
+	collectionFriendReq = helper.InitializeDB("friend-req")
+	collectionFriends = helper.InitializeDB("friends")
 }
 
 // !helpers
@@ -42,10 +49,17 @@ func checkEmpty(user model.User) bool {
 	if user.Password == "" {
 		success = false
 	}
-	if user.Contact == "" {
-		success = false
-	}
 	return success
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func userNameExists(username string) bool {
@@ -81,7 +95,7 @@ func SendResponse(res string, success bool) model.Response {
 //! controllers
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "applicaton/json")
+	w.Header().Set("Content-Type", "application/json")
 
 	var user model.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -104,6 +118,8 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		hashedPassword := helper.HashPass(user.Password)
 		user.Password = hashedPassword
 
+		user.IDCreated = false
+
 		result, err := collection.InsertOne(context.Background(), user)
 		if err != nil {
 			log.Fatal(err)
@@ -118,7 +134,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "applicaton/json")
+	w.Header().Set("Content-Type", "application/json")
 	var login model.Login
 	var user model.User
 
@@ -140,12 +156,15 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		response := SendResponse("use correct credentials", false)
-		json.NewEncoder(w).Encode(response)
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			return
+		}
 	}
 }
 
-func GetUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "applicaton/json")
+func GetUserWithAuth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	var user model.User
 
 	at := r.Header.Get("auth-token")
@@ -162,11 +181,32 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	user.Password = "-"
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func GetUserNoAuth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var user model.User
+
+	params := mux.Vars(r)
+	username := params["username"]
+
+	filter := bson.M{"username": username}
+	err := collection.FindOne(context.TODO(), filter).Decode(&user)
+	if err != nil {
+		log.Fatal(err)
+	}
+	user.Password = "-"
 	json.NewEncoder(w).Encode(user)
+
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "applicaton/json")
+	w.Header().Set("Content-Type", "application/json")
 	var update model.UpdateUser
 
 	err := json.NewDecoder(r.Body).Decode(&update)
@@ -187,7 +227,105 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	response := SendResponse("Updated", true)
 
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		return
+	}
+}
+
+// if u can make another file for this section then make it
+
+//  FRIENDS SECTION
+
+func FriendReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var friendReq model.FriendRequests
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+	client := fmt.Sprintf("%s", data["userid"]) // client which sends friend requests
+
+	params := mux.Vars(r)
+	id := params["id"] // user which is getting the friend
+
+	filter := bson.M{"to": id, "from": client}
+
+	err := collectionFriendReq.FindOne(context.TODO(), filter).Decode(&friendReq)
+	// no fr means erroris not nil
+
+	fmt.Println("hi")
+	fmt.Println(err)
+	if err == nil {
+		response := SendResponse("Friend request already  sent", false)
+		json.NewEncoder(w).Encode(response)
+
+	} else {
+		friendReq.To = id
+		friendReq.From = client
+
+		_, err := collectionFriendReq.InsertOne(context.Background(), friendReq)
+		if err != nil {
+			log.Fatal(err)
+		}
+		response := SendResponse("Friend request sent", true)
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func GetFriendReqs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+	userid := fmt.Sprintf("%s", data["userid"])
+
+	fmt.Println(fmt.Sprintf("%s", data["userid"]))
+
+	filter := bson.M{"to": userid}
+
+	cursor, err := collectionFriendReq.Find(context.Background(), filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var friendReqs []primitive.M
+
+	for cursor.Next(context.Background()) {
+		var friendReq bson.M
+		err := cursor.Decode(&friendReq)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(friendReq)
+		friendReqs = append(friendReqs, friendReq)
+	}
+
+	json.NewEncoder(w).Encode(friendReqs)
+}
+func AcceptFriendReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var friends model.Friends
+
+	json.NewDecoder(r.Body).Decode(&friends)
+
+	rand.Seed(time.Now().UnixNano())
+	fmt.Println(randSeq(5))
+
+	friends.Channel = randSeq(5)
+
+	filter := bson.M{"to": friends.UserOne, "from": friends.UserTwo}
+	_, err := collectionFriendReq.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, error := collectionFriends.InsertOne(context.Background(), friends)
+	if error != nil {
+		log.Fatal(error)
+	}
+	response := SendResponse("You are now Friends", true)
 	json.NewEncoder(w).Encode(response)
 }
 
-// bismillah
+// TODO: Accept Friend Req API
+//TODO : Create Channel between two users API
+//TODO : Remove as Friend API
