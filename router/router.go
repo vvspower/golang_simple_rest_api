@@ -13,7 +13,6 @@ func Router() *mux.Router {
 	router.HandleFunc("/login", controllers.LoginUser).Methods("POST")
 	router.HandleFunc("/user", controllers.GetUserWithAuth).Methods("GET")
 	router.HandleFunc("/user", controllers.UpdateUser).Methods("PUT")
-	router.HandleFunc("/user", controllers.UpdateUser).Methods("PUT")
 	router.HandleFunc("/init-igd", controllers.InitGameDetails).Methods("POST")
 	router.HandleFunc("/update-igd", controllers.UpdateIGD).Methods("PUT")
 
@@ -22,6 +21,8 @@ func Router() *mux.Router {
 	router.HandleFunc("/sendfq/{id}", controllers.FriendReq).Methods("POST")
 	router.HandleFunc("/getfq", controllers.GetFriendReqs).Methods("GET")
 	router.HandleFunc("/acceptfq", controllers.AcceptFriendReq).Methods("POST")
+	router.HandleFunc("/deletefq/{id}", controllers.DeleteFriend).Methods("DELETE")
+	router.HandleFunc("/getfriends", controllers.GetFriends).Methods("GET")
 
 	// listing
 

@@ -326,6 +326,68 @@ func AcceptFriendReq(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// TODO: Accept Friend Req API
-//TODO : Create Channel between two users API
-//TODO : Remove as Friend API
+func DeleteFriend(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	id := params["id"]
+	objectid, _ := primitive.ObjectIDFromHex(id)
+
+	filter := bson.M{"_id": objectid}
+	_, err := collectionFriends.DeleteOne(context.Background(), filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response := SendResponse("Friend removed", true)
+	json.NewEncoder(w).Encode(response)
+}
+
+type JSONString string
+
+func (j JSONString) MarshalJSON() ([]byte, error) {
+	return []byte(j), nil
+}
+
+func GetFriends(w http.ResponseWriter, r *http.Request) {
+
+	at := r.Header.Get("auth-token")
+	data, _ := helper.ExtractClaims(at)
+	userid := fmt.Sprintf("%s", data["userid"])
+
+	filter := bson.M{"userone": userid}
+	cursor, _ := collectionFriends.Find(context.Background(), filter)
+
+	var friends1 []primitive.M
+
+	for cursor.Next(context.Background()) {
+		var friend1 bson.M
+		err := cursor.Decode(&friend1)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(friend1)
+		friends1 = append(friends1, friend1)
+	}
+
+	filter2 := bson.M{"usertwo": userid}
+	cursor2, _ := collectionFriends.Find(context.Background(), filter2)
+
+	var friends2 []primitive.M
+
+	for cursor2.Next(context.Background()) {
+		var friend2 bson.M
+		err := cursor2.Decode(&friend2)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		friends2 = append(friends2, friend2)
+	}
+
+	friends1 = append(friends1, friends2...)
+
+	json.NewEncoder(w).Encode(friends1) //sent as a string. converted to json in the front end
+}
+
+// TODO : find freinds of user and return
