@@ -23,6 +23,7 @@ func Router() *mux.Router {
 	router.HandleFunc("/acceptfq", controllers.AcceptFriendReq).Methods("POST")
 	router.HandleFunc("/deletefq/{id}", controllers.DeleteFriend).Methods("DELETE")
 	router.HandleFunc("/getfriends", controllers.GetFriends).Methods("GET")
+	router.HandleFunc("/friend", controllers.GetFriend).Methods("POST")
 
 	// listing
 
@@ -37,7 +38,9 @@ func Router() *mux.Router {
 	// delete listing
 	router.HandleFunc("/listing/{id}", controllers.DeleteListing).Methods("DELETE")
 
-	// socket.io
+	// socket
+
+	router.HandleFunc("/api/messages/{channel}", controllers.WsConn).Methods("POST")
 
 	return router
 }

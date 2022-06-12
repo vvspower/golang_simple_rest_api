@@ -349,7 +349,23 @@ func (j JSONString) MarshalJSON() ([]byte, error) {
 	return []byte(j), nil
 }
 
+//TODO:  change name from friend to array and adjust accordingly so it can be used by all functions
+
+func friendCursor(cursor *mongo.Cursor) []primitive.M {
+	var friends []primitive.M
+	for cursor.Next(context.Background()) {
+		var friend bson.M
+		err := cursor.Decode(&friend)
+		if err != nil {
+			log.Fatal(err)
+		}
+		friends = append(friends, friend)
+	}
+	return friends
+}
+
 func GetFriends(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
 	at := r.Header.Get("auth-token")
 	data, _ := helper.ExtractClaims(at)
@@ -357,37 +373,41 @@ func GetFriends(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{"userone": userid}
 	cursor, _ := collectionFriends.Find(context.Background(), filter)
-
-	var friends1 []primitive.M
-
-	for cursor.Next(context.Background()) {
-		var friend1 bson.M
-		err := cursor.Decode(&friend1)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(friend1)
-		friends1 = append(friends1, friend1)
-	}
+	friends1 := friendCursor(cursor)
 
 	filter2 := bson.M{"usertwo": userid}
 	cursor2, _ := collectionFriends.Find(context.Background(), filter2)
+	friends2 := friendCursor(cursor2)
 
-	var friends2 []primitive.M
+	allFriends := append(friends1, friends2...)
 
-	for cursor2.Next(context.Background()) {
-		var friend2 bson.M
-		err := cursor2.Decode(&friend2)
-		if err != nil {
-			log.Fatal(err)
-		}
+	json.NewEncoder(w).Encode(allFriends)
+}
 
-		friends2 = append(friends2, friend2)
+func GetFriend(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var friend model.Friends
+
+	type User struct {
+		UserOne string `json:"userone"`
+		UserTwo string `json:"usertwo"`
+	}
+	var user User
+	json.NewDecoder(r.Body).Decode(&user)
+	filter := bson.M{"userone": user.UserOne, "usertwo": user.UserTwo}
+	err := collectionFriends.FindOne(context.Background(), filter).Decode(&friend)
+	var err2 error
+	if err != nil {
+		filter = bson.M{"userone": user.UserOne, "usertwo": user.UserTwo}
+		err2 = collectionFriends.FindOne(context.Background(), filter).Decode(&friend)
 	}
 
-	friends1 = append(friends1, friends2...)
-
-	json.NewEncoder(w).Encode(friends1) //sent as a string. converted to json in the front end
+	if err2 != nil {
+		json.NewEncoder(w).Encode(nil)
+	} else {
+		json.NewEncoder(w).Encode(friend)
+	}
 }
 
 // TODO : find freinds of user and return

@@ -1,22 +1,43 @@
 package controllers
 
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/pusher/pusher-http-go"
+	"net/http"
+)
+
 type Message struct {
 	Username string `json:"username"`
 	Message  string `json:"message"`
 }
 
-//
-//func wsConn(w http.ResponseWriter, r *http.Request) {
-//	w.Header().Set("Content-Type", "application/json")
-//
-//	at := r.Header.Get("auth-token")
-//	data, _ := helper.ExtractClaims(at)
-//	userid := data["userid"] // this is the id of client
-//	userid = fmt.Sprintf(":%s", userid)
-//
-//	params := mux.Vars(r)
-//	id := params["id"] // this is id of person who the client is trying to chat to
-//
-//	//	TODO find the channel created between those users and establish connection by sending back the channel and ap
-//
-//}
+func WsConn(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	channel := params["channel"]
+	fmt.Println(channel)
+
+	pusherClient := pusher.Client{
+		AppID:   "1421095",
+		Key:     "3a4c1b62e8e7b86334fd",
+		Secret:  "d445191d82cd77c696de",
+		Cluster: "ap2",
+		Secure:  true,
+	}
+
+	var data map[string]string
+
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		return
+	}
+
+	pusherClient.Trigger(channel, "message", data)
+
+	json.NewEncoder(w).Encode("Connected")
+
+	//	TODO find the channel created between those users and establish connection by sending back the channel and ap
+}
