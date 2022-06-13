@@ -42,5 +42,9 @@ func Router() *mux.Router {
 
 	router.HandleFunc("/api/messages/{channel}", controllers.WsConn).Methods("POST")
 
+	// valorant api
+
+	router.HandleFunc("/api/valorant/{region}/{user}/{tag}", controllers.GetMMRData).Methods("GET")
+
 	return router
 }

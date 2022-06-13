@@ -76,4 +76,20 @@ type UpdateListing struct {
 	Price       string `json:"price"`
 }
 
-// VP Account
+// FORUM
+
+type Post struct {
+	ID      primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	UserID  string             `json:"userid"`
+	Title   string             `json:"title"`
+	Content string             `json:"content"`
+	Likes   []string           `json:"likes"`
+	Tags    []string           `json:"tags"`
+}
+
+type Reply struct {
+	ID      primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	UserID  string             `json:"userid"`
+	PostID  string             `json:"post-id"`
+	Content string             `json:"content"`
+}

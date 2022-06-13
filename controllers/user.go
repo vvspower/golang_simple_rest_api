@@ -288,17 +288,7 @@ func GetFriendReqs(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	var friendReqs []primitive.M
-
-	for cursor.Next(context.Background()) {
-		var friendReq bson.M
-		err := cursor.Decode(&friendReq)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(friendReq)
-		friendReqs = append(friendReqs, friendReq)
-	}
+	friendReqs := helper.CursorHelper(cursor)
 
 	json.NewEncoder(w).Encode(friendReqs)
 }
@@ -343,27 +333,6 @@ func DeleteFriend(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type JSONString string
-
-func (j JSONString) MarshalJSON() ([]byte, error) {
-	return []byte(j), nil
-}
-
-//TODO:  change name from friend to array and adjust accordingly so it can be used by all functions
-
-func friendCursor(cursor *mongo.Cursor) []primitive.M {
-	var friends []primitive.M
-	for cursor.Next(context.Background()) {
-		var friend bson.M
-		err := cursor.Decode(&friend)
-		if err != nil {
-			log.Fatal(err)
-		}
-		friends = append(friends, friend)
-	}
-	return friends
-}
-
 func GetFriends(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -373,11 +342,11 @@ func GetFriends(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{"userone": userid}
 	cursor, _ := collectionFriends.Find(context.Background(), filter)
-	friends1 := friendCursor(cursor)
+	friends1 := helper.CursorHelper(cursor)
 
 	filter2 := bson.M{"usertwo": userid}
 	cursor2, _ := collectionFriends.Find(context.Background(), filter2)
-	friends2 := friendCursor(cursor2)
+	friends2 := helper.CursorHelper(cursor2)
 
 	allFriends := append(friends1, friends2...)
 
@@ -410,4 +379,5 @@ func GetFriend(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// TODO : find freinds of user and return
+// TODO : find friends of user and return
+//TODO : make api of getting user ingame details
