@@ -21,10 +21,10 @@ func WsConn(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(channel)
 
 	pusherClient := pusher.Client{
-		AppID:   "1421095",
-		Key:     "3a4c1b62e8e7b86334fd",
-		Secret:  "d445191d82cd77c696de",
-		Cluster: "ap2",
+		AppID:   "-",
+		Key:     "-",
+		Secret:  "-",
+		Cluster: "-",
 		Secure:  true,
 	}
 
